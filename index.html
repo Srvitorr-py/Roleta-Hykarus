@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roleta de São Jorge - Fate RPG</title>
+    <style>
+        :root {
+            --bg-color: #0f0f0f;
+            --panel-bg: #1a1a1a;
+            --gold: #ffd700;
+            --gold-dark: #cca600;
+            --text-main: #f0f0f0;
+            --blood-red: #8b0000;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Georgia', serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--panel-bg);
+            border: 3px solid var(--gold);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.2);
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--gold);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .slot-machine {
+            background: #000;
+            border: 4px inset var(--gold);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #numero-sorteado {
+            font-size: 4rem;
+            font-weight: bold;
+            color: var(--gold);
+            margin: 0;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        #nome-arma {
+            font-size: 1.3rem;
+            color: #fff;
+            margin: 10px 0 5px 0;
+            font-weight: bold;
+        }
+
+        #detalhes-arma {
+            font-size: 0.95rem;
+            color: #ccc;
+            margin: 0;
+            font-style: italic;
+        }
+
+        .btn-girar {
+            background-color: var(--blood-red);
+            color: #fff;
+            border: 2px solid var(--gold);
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Georgia', serif;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-top: 15px;
+            text-transform: uppercase;
+        }
+
+        .btn-girar:hover:not(:disabled) {
+            background-color: #a30000;
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.8);
+            transform: scale(1.02);
+        }
+
+        .btn-girar:disabled {
+            background-color: #444;
+            border-color: #666;
+            cursor: not-allowed;
+        }
+
+        .btn-lista {
+            background-color: transparent;
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+
+        .btn-lista:hover {
+            background-color: rgba(255, 215, 0, 0.1);
+        }
+
+        /* Modal da Lista Completa */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.85);
+            z-index: 10;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--panel-bg);
+            border: 2px solid var(--gold);
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+        .modal-content h2 {
+            color: var(--gold);
+            text-align: center;
+            margin-top: 0;
+        }
+
+        .lista-item {
+            font-size: 0.85rem;
+            border-bottom: 1px solid #333;
+            padding: 6px 0;
+        }
+
+        .fechar-modal {
+            background-color: var(--blood-red);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            margin: 15px auto 0 auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Roleta de São Jorge</h1>
+        <p style="font-size: 0.9rem; color: #aaa; margin-top: -10px;">Hykarus "O Sete-Sortes" • Fate Condensado</p>
+        
+        <div class="slot-machine">
+            <p id="numero-sorteado">??</p>
+            <p id="nome-arma">Gire a roleta para invocar uma arma</p>
+            <p id="detalhes-arma">O arsenal sagrado aguarda...</p>
+        </div>
+
+        <button id="btnGirar" class="btn-girar" onclick="girarRoleta()">Girar Roleta</button>
+        <button class="btn-lista" onclick="abrirModal()">Ver Lista de Armas (1-60)</button>
+    </div>
+
+    <!-- Modal com todas as armas -->
+    <div id="modalArmas" class="modal">
+        <div class="modal-content">
+            <h2>Arsenal de São Jorge</h2>
+            <div id="tabelaArmasContainer"></div>
+            <button class="fechar-modal" onclick="fecharModal()">Fechar</button>
+        </div>
+    </div>
+
+    <script>
+        const armas = {
+            1: { nome: "Espada Curta Clássica", dano: "+2", efeito: "Equilibrada. Confiável em qualquer situação." },
+            2: { nome: "Peixe Podre", dano: "+0", efeito: "O cheiro é horrível. Causa a consequência suave Nojo Incontrolável." },
+            3: { nome: "Machado de Carrasco", dano: "+4", efeito: "Ameaçador. Causa Dano Extra se o alvo já estiver com uma Consequência." },
+            4: { nome: "O Manto de Sangue Mártir", dano: "+0", efeito: "Não é uma arma, veste você. Cura passivamente seu estresse físico todo turno." },
+            5: { nome: "Tridente de Feno (Forcado)", dano: "+1", efeito: "Mantém o inimigo afastado. Longo Alcance." },
+            6: { nome: "Rosário de Prata Pesado", dano: "+1", efeito: "Enrola nos braços do inimigo e queima criaturas das trevas ao toque." },
+            7: { nome: "Corda Frouxa (1 metro)", dano: "+0", efeito: "Pode ser usada para tentar Criar a Vantagem Amarrado." },
+            8: { nome: "A Lança de São Jorge", dano: "+5", efeito: "Trespassa qualquer armadura física, mágica ou demoníaca. A vitória é quase certa." },
+            9: { nome: "Mosquete Antigo", dano: "+4", efeito: "Dano altíssimo, mas você fica Imóvel enquanto mira." },
+            10: { nome: "Colher de Pau", dano: "+0", efeito: "Bater com ela causa mais indignação que dor. Ganhe +2 em Provocar." },
+            11: { nome: "Cimitarra de Fogo Puro", dano: "+3", efeito: "Cauteriza o que corta. Nenhuma bruxa consegue se regenerar desse dano." },
+            12: { nome: "Faca de Pão Enferrujada", dano: "+1", efeito: "Causa cortes feios. Pode gerar Sangramento Contínuo." },
+            13: { nome: "A Estátua de São Jorge (Jackpot)", dano: "HIT KILL", efeito: "O próprio São Jorge materializa-se em uma estátua de bronze e esmaga o alvo imediatamente (Fim de Game)." },
+            14: { nome: "Pão Duro de Dias", dano: "+1", efeito: "Denso como pedra. Acerta a cabeça e deixa o alvo Desorientado." },
+            15: { nome: "Lança de Justa", dano: "+3", efeito: "Requer espaço. Se você se mover antes de atacar, o dano vai para +4." },
+            16: { nome: "Cruz de Madeira Maciça", dano: "+1", efeito: "Afasta magia maligna. Concede +2 para defender de feitiços." },
+            17: { nome: "Cinzas de Fogueira", dano: "+0", efeito: "Jogadas nos olhos, criam uma nuvem de Cegueira Dolorosa." },
+            18: { nome: "Foice Rústica", dano: "+2", efeito: "Excelente para mirar nas pernas. Deixa o alvo Derrubado." },
+            19: { nome: "Maça Estrela da Manhã", dano: "+3", efeito: "Destrói escudos e aparas normais." },
+            20: { nome: "Corrente do Destino", dano: "+3", efeito: "Prende a alma. Bruxas pegas não conseguem lançar magia de teletransporte ou ilusão." },
+            21: { nome: "Tesoura de Tosquiar", dano: "+1", efeito: "Cortes precisos. Ignora armaduras leves." },
+            22: { nome: "Alabarda da Inquisição", dano: "+3", efeito: "Corta e empurra. Perfeita para afastar multidões." },
+            23: { nome: "Sino de Prata", dano: "+0", efeito: "Bater o sino cancela ou enfraquece o feitiço de uma bruxa no ambiente." },
+            24: { nome: "Sapato Velho e Sujo", dano: "+0", efeito: "Para ser arremessado. Causa Humilhação Profunda." },
+            25: { nome: "Escudo Draconiano", dano: "+2", efeito: "Usado para bater. Dá um bônus absurdo de +3 na Defesa durante todo o combate." },
+            26: { nome: "Rapieira de Duelo", dano: "+2", efeito: "Leve e rápida. Concede +1 em rolagens de Lutar para Defender." },
+            27: { nome: "Fivela de Cinto Pesada", dano: "+1", efeito: "Arma improvisada que arranca sangue fácil." },
+            28: { nome: "Machado de Lenhador", dano: "+3", efeito: "Lento para atacar, mas devastador se atingir." },
+            29: { nome: "A Coroa de Espinhos Brilhante", dano: "+0", efeito: "Dano devolvido: Inimigos em corpo-a-corpo sofrem 2 de dano automaticamente." },
+            30: { nome: "Estaca de Madeira Branca", dano: "+2", efeito: "Fatal contra bestas da noite." },
+            31: { nome: "Rede de Cobre Trançado", dano: "+0", efeito: "Não causa dano direto, mas deixa o alvo Totalmente Imobilizado." },
+            32: { nome: "Lança Simples", dano: "+2", efeito: "Excelente alcance. Você ataca antes de quem tem armas curtas." },
+            33: { nome: "Pedaço de Galho Seco", dano: "+0", efeito: "Estilhaça no alvo. Cria a vantagem Cego por Farpas." },
+            34: { nome: "O Vento da Capadócia", dano: "+2", efeito: "Você invoca um furacão divino em suas mãos. Arremessa inimigos para longe." },
+            35: { nome: "Bíblia de Capa de Ferro", dano: "+1", efeito: "Bloqueia magia e esmaga narizes com a palavra divina." },
+            36: { nome: "Chicote de Lâminas", dano: "+2", efeito: "Causa intensa agonia. Inflige Sangramento Severo." },
+            37: { nome: "Perna de Cadeira", dano: "+1", efeito: "Sólida. Dá confiança. Você não recebe penalidades defensivas." },
+            38: { nome: "Mangual de Infantaria", dano: "+3", efeito: "A corrente ignora escudos passando por cima deles." },
+            39: { nome: "Espelho Bendiço", dano: "+0", efeito: "Se você usar a ação Defender, reflete o dano mágico de volta à bruxa." },
+            40: { nome: "A Espada Ascalon", dano: "+4", efeito: "A espada lendária que abateu o dragão. Irradia coragem nos aliados." },
+            41: { nome: "Panela de Barro", dano: "+1", efeito: "Quebra com um estrondo ensurdecedor. Inimigo Surdo Temporariamente." },
+            42: { nome: "Pistola de Pederneira", dano: "+3", efeito: "Barulhenta. Rola Atirar. Apenas 1 tiro garantido na cena." },
+            43: { nome: "Foice da Punição Severa", dano: "+4", efeito: "Corta diretamente a energia mágica. Interrompe e destrói feitiços." },
+            44: { nome: "Frasco de Água Benta", dano: "+1", efeito: "Dano sobe para +3 se o alvo for bruxa, demônio ou herege." },
+            45: { nome: "Alfanje Curvo", dano: "+2", efeito: "Desliza pela carne. Aumenta chances de causar Consequência." },
+            46: { nome: "Pá de Coveiro", dano: "+2", efeito: "Pesada. Pode ser usada como escudo improvisado (+1 em Defesa)." },
+            47: { nome: "Besta de Mão (Carregada)", dano: "+2", efeito: "Permite usar Atirar. É letal, mas leva um turno para recarregar." },
+            48: { nome: "Vela Acesa Pingando", dano: "+0", efeito: "Causa pouco dano, mas pode deixar o alvo Em Chamas." },
+            49: { nome: "Arco de Luz Branca", dano: "+3", efeito: "Atira flechas de pura energia usando Atirar. Ignora paredes mágicas." },
+            50: { nome: "Martelo de Ferreiro", dano: "+2", efeito: "Amassa armaduras e quebra ossos facilmente." },
+            51: { nome: "Espada Montante", dano: "+3", efeito: "Gigante. Requer duas mãos. Permite atingir dois alvos juntos." },
+            52: { nome: "Corrente de Ferro Fria", dano: "+2", efeito: "Pode prender os pés do inimigo. Cria Acorrentado." },
+            53: { nome: "Adaga Fina", dano: "+1", efeito: "Fácil de esconder. Ideal para um Ataque Furtivo." },
+            54: { nome: "Martelo de Guerra Sagrado", dano: "+3", efeito: "Libera uma pequena onda de força (empurra alvos para trás)." },
+            55: { nome: "Facão de Açougueiro", dano: "+2", efeito: "Arma brutal. Inimigos fracos ficam Intimidados." },
+            56: { nome: "Cálice Dourado", dano: "+1", efeito: "Reflete a luz com fervor divino, ofuscando inimigos." },
+            57: { nome: "Estrela Ninja (Shuriken)", dano: "+1", efeito: "Uma curiosidade oriental. Pode jogar três de uma vez." },
+            58: { nome: "Espada Bastarda (1 mão e meia)", dano: "+3", efeito: "O equilíbrio perfeito entre força e velocidade." },
+            59: { nome: "Chicote de Arreio", dano: "+1", efeito: "Permite puxar itens da mão do oponente (Desarmado)." },
+            60: { nome: "Incensário Ardente", dano: "+2", efeito: "Solta fumaça que cria Visão Obscurecida na área." }
+        };
+
+        function girarRoleta() {
+            const btn = document.getElementById('btnGirar');
+            const numEl = document.getElementById('numero-sorteado');
+            const nomeEl = document.getElementById('nome-arma');
+            const detalhesEl = document.getElementById('detalhes-arma');
+            
+            btn.disabled = true;
+            let contador = 0;
+            const maxPassos = 25; // Quantidade de trocas visuais antes de parar
+            
+            let intervalo = setInterval(() => {
+                let numeroAleatorio = Math.floor(Math.random() * 60) + 1;
+                numEl.textContent = numeroAleatorio < 10 ? '0' + numeroAleatorio : numeroAleatorio;
+                nomeEl.textContent = "Girando a sorte...";
+                detalhesEl.textContent = "A roleta mística está decidindo...";
+                contador++;
+
+                if (contador >= maxPassos) {
+                    clearInterval(intervalo);
+                    let sorteioFinal = Math.floor(Math.random() * 60) + 1;
+                    let armaSorteada = armas[sorteioFinal];
+
+                    numEl.textContent = sorteioFinal < 10 ? '0' + sorteioFinal : sorteioFinal;
+                    nomeEl.textContent = `${sorteioFinal}. ${armaSorteada.nome}`;
+                    detalhesEl.textContent = `Dano: ${armaSorteada.dano} | Efeito: ${armaSorteada.efeito}`;
+                    btn.disabled = false;
+                }
+            }, 80);
+        }
+
+        function preencherModal() {
+            const container = document.getElementById('tabelaArmasContainer');
+            let html = '';
+            for (let i = 1; i <= 60; i++) {
+                html += `<div class="lista-item"><strong>#${i}</strong> ${armas[i].nome} <span style="color:var(--gold);">(${armas[i].dano})</span></div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function abrirModal() {
+            preencherModal();
+            document.getElementById('modalArmas').style.display = 'flex';
+        }
+
+        function fecharModal() {
+            document.getElementById('modalArmas').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
